@@ -1,0 +1,111 @@
+<html>
+  <head>
+    <!-- BEGIN TRACKJS -->
+    <script type="text/javascript">window._trackJs = { token: '154b68c3e75c41aba9018186915abd18' };</script>
+    <script type="text/javascript" src="https://d2zah9y47r7bi2.cloudfront.net/releases/current/tracker.js"></script>
+    <!-- END TRACKJS -->
+
+    <!-- BEGIN SENTRY -->
+    <script src="https://cdn.ravenjs.com/3.0.4/raven.min.js"></script>
+    <script type="text/javascript">
+      Raven.config('https://c60a856385264fe4ba149f788ce6bdba@app.getsentry.com/79605').install()
+    </script>
+    
+    <!-- END SENTRY -->
+  </head>
+
+  <body>
+    <ol id='results' />
+
+    <script type="text/javascript">
+      function bind (context, name) {
+        return function () {
+          return context[name].apply(context, arguments);
+        }
+      }
+
+      var Button = {
+        clicked: 0,
+        click: function() { this.clicked++ },
+        reset: function() { this.clicked = 0 }
+      };
+
+      var i = 0, times = [];
+      var timer;
+      var start = document.createElement('li');
+      start.innerHTML = 'Start';
+      start.onclick = function () {
+        clearInterval(timer);
+        timer = setInterval(function () {
+          if (Button.clicked) {
+            console.log("clicked!");
+            times.push(i);
+            Button.reset();
+            i = 0;
+          } else {
+            i++;
+            console.log("not clicked yet...");
+          }
+        }, 1);
+      };
+      document.getElementById('results').appendChild(start);
+
+      var elem = document.createElement('li');
+      elem.innerHTML = 'Click me!';
+      elem.onclick = bind(Button, 'click');
+      document.getElementById('results').appendChild(elem);
+
+      function stats (list) {
+        var stats = {};
+
+        var sum = function (l) { return l.reduce(function (a, b) { return a + b }, 0) }
+        var avg = function (l) { var a = sum(l) / l.length; return Math.floor(100 * a) / 100 }
+
+        var stddev = function (l) {
+          var mean = avg(l);
+          return Math.sqrt(
+            l.map(function (x) { return Math.pow(x - mean, 2) })
+              .reduce(function (a, b) { return a + b }, 0)
+          / l.length);
+        }
+
+        stats.sum = sum(list);
+        stats.avg = avg(list);
+        stats.stdev = stddev(list);
+
+        return JSON.stringify(stats, null, 2);
+     }
+
+      var stop = document.createElement('li');
+      stop.innerHTML = 'Stop';
+      stop.onclick = function () {
+        times.push(i);
+        console.log("shutting down!");
+        clearInterval(timer);
+        console.log("stats: " + stats(times));
+        times = [];
+      };
+      document.getElementById('results').appendChild(stop);
+
+      function myLogError(e) {
+        if (! e instanceof Error) {
+          e = new Error(JSON.stringify(e));
+        }
+        trackJs.track(e);
+        Raven.captureException(e);
+      }
+
+      var throwError = document.createElement('li');
+      throwError.innerHTML = 'Throw an Error';
+      throwError.onclick = function () {
+        try {
+          noSuchFunction();
+          throw new Error("well this should fail");
+        } catch (e) {
+          myLogError(e);
+        }
+      };
+      document.getElementById('results').appendChild(throwError);
+    </script>
+  </body>
+</html>
